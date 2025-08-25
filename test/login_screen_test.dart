@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:turfapp/screens/auth/login_screen.dart';
 import 'package:turfapp/services/auth_service.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 void main() {
   group('LoginScreen Widget Tests', () {
-    late MockAuthService mockAuthService;
+    late _FakeAuthService mockAuthService;
 
     setUp(() {
-      mockAuthService = MockAuthService();
+      mockAuthService = _FakeAuthService();
     });
 
     testWidgets('renders login form elements', (WidgetTester tester) async {
@@ -25,7 +27,7 @@ void main() {
       );
 
       expect(find.text('Login'), findsNWidgets(2)); // AppBar and button
-      expect(find.byType(TextField), findsNWidgets(2));
+      expect(find.byType(TextFormField), findsNWidgets(2));
       expect(find.byType(ElevatedButton), findsOneWidget);
     });
 
@@ -42,25 +44,36 @@ void main() {
         ),
       );
 
-      await tester.enterText(
-          find.byType(TextField).first, 'test@example.com');
-      await tester.enterText(
-          find.byType(TextField).last, 'password123');
+      await tester.enterText(find.byType(TextFormField).first, 'test@example.com');
+      await tester.enterText(find.byType(TextFormField).last, 'password123');
       await tester.tap(find.byType(ElevatedButton));
       await tester.pump();
 
-      verify(mockAuthService.signIn(
-          'test@example.com', 'password123')).called(1);
+      expect(mockAuthService.capturedEmail, 'test@example.com');
+      expect(mockAuthService.capturedPassword, 'password123');
     });
   });
 }
 
-class MockAuthService extends Mock implements AuthService {
+class _FakeAuthService implements AuthService {
+  String? capturedEmail;
+  String? capturedPassword;
+
   @override
   Future<void> signIn(String email, String password) async {
-    return super.noSuchMethod(
-      Invocation.method(#signIn, [email, password]),
-      returnValue: Future<void>.value(),
-    );
+    capturedEmail = email;
+    capturedPassword = password;
   }
+
+  @override
+  Future<void> signOut() async {}
+
+  @override
+  Future<void> signUp(String email, String password) async {}
+
+  @override
+  Stream<AuthState> get onAuthStateChange => const Stream.empty();
+
+  @override
+  User? get currentUser => null;
 }
