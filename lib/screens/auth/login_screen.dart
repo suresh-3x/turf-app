@@ -109,8 +109,3 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 }
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  mockito: ^5.4.2
-  build_runner: ^2.4.6

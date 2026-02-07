@@ -9,22 +9,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:turfapp/main.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:turfapp/services/auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class _FakeAuthService implements AuthService {
+  @override
+  Stream<AuthState> get onAuthStateChange => const Stream.empty();
+
+  @override
+  Future<void> signIn(String email, String password) async {}
+
+  @override
+  Future<void> signOut() async {}
+
+  @override
+  Future<void> signUp(String email, String password) async {}
+
+  @override
+  User? get currentUser => null;
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('TurfApp smoke test', (WidgetTester tester) async {
+    // Build our app and trigger a frame with provider overrides to avoid real Supabase.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authStateProvider.overrideWith((ref) => const Stream<AuthState>.empty()),
+          authServiceProvider.overrideWithValue(_FakeAuthService()),
+        ],
+        child: const TurfApp(),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Simple smoke check that app renders without exceptions.
+    // Allow timers to complete
+    await tester.pump(const Duration(seconds: 11));
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

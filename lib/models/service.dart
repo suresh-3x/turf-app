@@ -14,4 +14,23 @@ class Service {
     required this.category,
     required this.location,
   });
+
+  Service copyWith({
+    String? id,
+    String? vendorId,
+    String? name,
+    String? description,
+    String? category,
+    String? location,
+  }) {
+    return Service(
+      id: id ?? this.id,
+      vendorId: vendorId ?? this.vendorId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      location: location ?? this.location,
+    );
+  }
+
 } 
