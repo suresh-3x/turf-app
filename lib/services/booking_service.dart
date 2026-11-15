@@ -1,71 +1,71 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/booking.dart';
-import '../models/slot.dart';
+import 'auth_service.dart';
+import 'supabase_providers.dart';
 
-final bookingServiceProvider = Provider((ref) => BookingService());
+final bookingServiceProvider = Provider<BookingService>(
+  (ref) => BookingService(ref.watch(supabaseClientProvider)),
+);
 
-final slotProvider = FutureProvider.family<Slot, String>((ref, slotId) async {
-  return ref.watch(bookingServiceProvider).getSlotById(slotId);
+/// Bookings made by the signed-in customer, soonest first.
+final myBookingsProvider = FutureProvider.autoDispose<List<Booking>>((ref) async {
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId == null) return [];
+  return ref.watch(bookingServiceProvider).fetchCustomerBookings(userId);
 });
 
-final userBookingsProvider = FutureProvider.family<List<Booking>, String>((ref, userId) async {
-  return ref.watch(bookingServiceProvider).getUserBookings(userId);
+/// Bookings for the signed-in vendor's services, soonest first.
+final vendorBookingsProvider = FutureProvider.autoDispose<List<Booking>>((ref) async {
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId == null) return [];
+  return ref.watch(bookingServiceProvider).fetchVendorBookings(userId);
+});
+
+final bookingDetailProvider = FutureProvider.autoDispose.family<Booking, String>((ref, id) {
+  return ref.watch(bookingServiceProvider).fetchBooking(id);
 });
 
 class BookingService {
-  final _supabase = Supabase.instance.client;
+  BookingService(this._client);
+  final SupabaseClient _client;
 
-  // Fetch bookings for a user
-  Future<List<Booking>> getUserBookings(String userId) async {
-    final response = await _supabase.from('bookings').select().eq('user_id', userId).order('start_time');
-    return (response as List)
-        .map((json) => Booking(
-              id: json['id'].toString(),
-              serviceId: json['service_id'].toString(),
-              userId: json['user_id'].toString(),
-              startTime: DateTime.parse(json['start_time']),
-              endTime: DateTime.parse(json['end_time']),
-              status: json['status'] ?? 'pending',
-            ))
-        .toList();
+  static const _select =
+      '*, service:services!inner(*), slot:slots(*), customer:users(id, name, email, role, phone), reviews(id)';
+
+  /// Books a slot atomically. Fails with a readable message if it was taken.
+  Future<String> bookSlot(String slotId, {String? notes}) async {
+    final result = await _client.rpc('book_slot', params: {'p_slot_id': slotId, 'p_notes': notes});
+    return (result as Map<String, dynamic>)['id'] as String;
   }
 
-  // Create a new booking
-  Future<void> createBooking({
-    required String serviceId,
-    required String userId,
-    required String slotId,
-    required DateTime startTime,
-    required DateTime endTime,
-  }) async {
-    await _supabase.from('bookings').insert({
-      'service_id': serviceId,
-      'user_id': userId,
-      'slot_id': slotId,
-      'start_time': startTime.toIso8601String(),
-      'end_time': endTime.toIso8601String(),
-      'status': 'pending',
-    });
-    // Mark slot as booked
-    await _supabase.from('slots').update({'is_booked': true}).eq('id', slotId);
-  }
-
-  // Fetch a slot by ID
-  Future<Slot> getSlotById(String slotId) async {
-    final response = await _supabase.from('slots').select().eq('id', slotId).single();
-    return Slot(
-      id: response['id'].toString(),
-      serviceId: response['service_id'].toString(),
-      startTime: DateTime.parse(response['start_time']),
-      endTime: DateTime.parse(response['end_time']),
-      isBooked: response['is_booked'] ?? false,
+  Future<void> updateStatus(String bookingId, BookingStatus status) async {
+    await _client.rpc(
+      'update_booking_status',
+      params: {'p_booking_id': bookingId, 'p_status': status.name},
     );
   }
 
-  // Cancel a booking
-  Future<void> cancelBooking(String bookingId) async {
-    // ...
+  Future<void> cancel(String bookingId) => updateStatus(bookingId, BookingStatus.cancelled);
+
+  Future<List<Booking>> fetchCustomerBookings(String customerId) async {
+    final rows = await _client.from('bookings').select(_select).eq('customer_id', customerId);
+    return _sorted(rows.map(Booking.fromJson).toList());
   }
-} 
+
+  Future<List<Booking>> fetchVendorBookings(String vendorId) async {
+    final rows = await _client.from('bookings').select(_select).eq('service.vendor_id', vendorId);
+    return _sorted(rows.map(Booking.fromJson).toList());
+  }
+
+  Future<Booking> fetchBooking(String id) async {
+    final row = await _client.from('bookings').select(_select).eq('id', id).single();
+    return Booking.fromJson(row);
+  }
+
+  static List<Booking> _sorted(List<Booking> list) {
+    final far = DateTime(9999);
+    return list..sort((a, b) => (a.startTime ?? far).compareTo(b.startTime ?? far));
+  }
+}
