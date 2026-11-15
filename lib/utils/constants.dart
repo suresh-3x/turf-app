@@ -13,6 +13,13 @@ const String supabaseAnonKey = String.fromEnvironment(
 
 const String appName = 'TurfApp';
 
+/// Which backend the app talks to:
+///   mock     – built-in demo database saved on the device (default)
+///   supabase – the Supabase project above
+/// Choose with --dart-define=BACKEND=supabase
+const String backend = String.fromEnvironment('BACKEND', defaultValue: 'mock');
+const bool useMockBackend = backend != 'supabase';
+
 /// Categories a vendor can list a service under.
 const List<String> serviceCategories = [
   'Football turf',

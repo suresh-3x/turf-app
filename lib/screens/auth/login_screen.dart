@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../services/auth_service.dart';
+import '../../services/mock/mock_services.dart';
 import '../../utils/helpers.dart';
 import '../../utils/validators.dart';
 
@@ -58,9 +59,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  void _demoLogin(String email) {
+    _emailController.text = email;
+    _passwordController.text = 'demo123';
+    _handleLogin();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final demoMode = ref.watch(mockDatabaseProvider) != null;
     return Scaffold(
       appBar: AppBar(title: const Text('Login')),
       body: SafeArea(
@@ -76,6 +84,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     Text('Welcome back', style: theme.textTheme.headlineSmall),
                     const SizedBox(height: 24),
+                    if (demoMode) ...[
+                      Card(
+                        color: theme.colorScheme.secondaryContainer,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text('Demo mode', style: theme.textTheme.titleSmall),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Data is stored on this device only. Try a demo account '
+                                '(password demo123) or sign up with any email.',
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: _isLoading
+                                          ? null
+                                          : () => _demoLogin('customer@demo.com'),
+                                      child: const Text('Customer'),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: _isLoading
+                                          ? null
+                                          : () => _demoLogin('vendor@demo.com'),
+                                      child: const Text('Venue owner'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                     if (_errorMessage != null) ...[
                       Text(_errorMessage!, style: TextStyle(color: theme.colorScheme.error)),
                       const SizedBox(height: 16),

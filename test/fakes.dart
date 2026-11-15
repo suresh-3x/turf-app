@@ -49,7 +49,10 @@ class FakeAuthService implements AuthService {
   String? failWith;
 
   @override
-  Stream<AuthState> get onAuthStateChange => const Stream.empty();
+  String? get currentUserId => null;
+
+  @override
+  Stream<String?> get userIdChanges => const Stream.empty();
 
   @override
   Future<void> signIn(String email, String password) async {

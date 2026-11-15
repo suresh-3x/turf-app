@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/app_user.dart';
 import '../../services/auth_service.dart';
+import '../../services/mock/mock_services.dart';
 import '../../utils/helpers.dart';
 import '../../utils/validators.dart';
 import '../../widgets/async_value_view.dart';
@@ -69,6 +70,25 @@ class ProfileScreen extends ConsumerWidget {
                   builder: (_) => _EditProfileDialog(user: user),
                 ),
               ),
+              if (ref.watch(mockDatabaseProvider) != null) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.restart_alt),
+                  label: const Text('Reset demo data'),
+                  onPressed: () async {
+                    final ok = await confirmAction(
+                      context,
+                      title: 'Reset demo data?',
+                      message:
+                          'All accounts, venues and bookings on this device go back to '
+                          'the starting demo data, and you will be logged out.',
+                      confirmLabel: 'Reset',
+                      destructive: true,
+                    );
+                    if (ok) ref.read(mockDatabaseProvider)?.resetToSeed();
+                  },
+                ),
+              ],
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 icon: const Icon(Icons.logout),

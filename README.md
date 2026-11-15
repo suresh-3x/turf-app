@@ -23,7 +23,55 @@ pay at the venue.
 | Navigation | go_router (role-aware redirects) |
 | Backend | Supabase: Auth, Postgres with row-level security, Realtime |
 
-## Getting started
+## Demo mode (no backend needed)
+
+By default the app runs on a **built-in mock database** stored on the device, so it works
+without Supabase or an internet connection. It follows the same booking rules as the real
+database and comes with demo data:
+
+| Account | Email | Password |
+| --- | --- | --- |
+| Customer | `customer@demo.com` | `demo123` |
+| Venue owner | `vendor@demo.com` | `demo123` |
+| Second venue owner | `owner2@demo.com` | `demo123` |
+| Second customer | `ravi@demo.com` | `demo123` |
+
+The login screen has one-tap buttons for the first two, and you can sign up with any email.
+Data survives app restarts; **Profile → Reset demo data** starts over.
+
+To use the real Supabase backend instead, run with `--dart-define=BACKEND=supabase`.
+
+## Run on an iPhone
+
+You need a Mac with Xcode and Flutter installed, and the iPhone connected by cable.
+
+```bash
+git clone https://github.com/suresh-3x/turf-app.git && cd turf-app
+git checkout claude/nice-darwin-xfvj8l
+flutter pub get
+open ios/Runner.xcworkspace
+```
+
+In Xcode, select **Runner** → **Signing & Capabilities**:
+
+1. Tick **Automatically manage signing** and choose your **Team** (a free Apple ID works).
+2. Change **Bundle Identifier** from `com.example.turfapp` to something unique, such as
+   `com.yourname.turfapp`. Apple rejects `com.example` IDs that someone else has registered.
+
+On the iPhone, turn on **Settings → Privacy & Security → Developer Mode** (iOS 16+) and restart
+when asked. Then:
+
+```bash
+flutter devices              # your iPhone should be listed
+flutter run --release        # builds, installs and launches the app
+```
+
+The first time, iOS blocks apps from a free developer account: open **Settings → General →
+VPN & Device Management**, tap your Apple ID and choose **Trust**, then open TurfApp again.
+With a free account the app stops opening after 7 days; run `flutter run --release` again to
+reinstall it.
+
+## Using Supabase
 
 ### 1. Set up the database
 
@@ -53,14 +101,15 @@ In the dashboard, under **Authentication → Providers → Email**:
 
 ```bash
 flutter pub get
-flutter run
+flutter run --dart-define=BACKEND=supabase
 ```
 
 The Supabase URL and anon key default to the values in `lib/utils/constants.dart`. To point
 at a different project without editing code:
 
 ```bash
-flutter run --dart-define=SUPABASE_URL=https://xyz.supabase.co --dart-define=SUPABASE_ANON_KEY=...
+flutter run --dart-define=BACKEND=supabase \
+  --dart-define=SUPABASE_URL=https://xyz.supabase.co --dart-define=SUPABASE_ANON_KEY=...
 ```
 
 The anon key is meant to be public; the row-level security policies decide what each user can

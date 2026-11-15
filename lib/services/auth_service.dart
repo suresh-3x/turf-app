@@ -8,16 +8,17 @@ final authServiceProvider = Provider<AuthService>(
   (ref) => AuthService(ref.watch(supabaseClientProvider)),
 );
 
-/// Auth events (sign in, sign out, token refresh).
-final authStateProvider = StreamProvider<AuthState>(
-  (ref) => ref.watch(authServiceProvider).onAuthStateChange,
+/// Emits the signed-in user's ID on every sign-in / sign-out.
+final _userIdChangesProvider = StreamProvider<String?>(
+  (ref) => ref.watch(authServiceProvider).userIdChanges,
 );
 
 /// ID of the signed-in user, or null. Only changes when the user changes.
 final currentUserIdProvider = Provider<String?>((ref) {
   final auth = ref.watch(authServiceProvider);
-  final fromStream = ref.watch(authStateProvider.select((s) => s.valueOrNull?.session?.user.id));
-  return fromStream ?? auth.currentUser?.id;
+  final changes = ref.watch(_userIdChangesProvider);
+  // Before the first event, fall back to the restored session (if any).
+  return changes.hasValue ? changes.value : auth.currentUserId;
 });
 
 /// Profile row of the signed-in user (name, role...).
@@ -36,8 +37,12 @@ class AuthService {
   AuthService(this._client);
   final SupabaseClient _client;
 
-  Stream<AuthState> get onAuthStateChange => _client.auth.onAuthStateChange;
-  User? get currentUser => _client.auth.currentUser;
+  /// The signed-in user's ID, or null.
+  String? get currentUserId => _client.auth.currentUser?.id;
+
+  /// Emits the user ID (or null) whenever the user signs in or out.
+  Stream<String?> get userIdChanges =>
+      _client.auth.onAuthStateChange.map((s) => s.session?.user.id).distinct();
 
   /// Throws [AuthException] with a readable message on failure.
   Future<void> signIn(String email, String password) async {
@@ -74,7 +79,7 @@ class AuthService {
   }
 
   Future<void> updateProfile({required String name, String? phone}) async {
-    final id = currentUser?.id;
+    final id = currentUserId;
     if (id == null) throw const AuthException('You are not signed in.');
     await _client
         .from('users')

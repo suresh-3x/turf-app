@@ -162,7 +162,7 @@ class CatalogService {
   }) async {
     await _client.from('reviews').insert({
       'booking_id': bookingId,
-      'customer_id': _client.auth.currentUser?.id,
+      'customer_id': _client.auth.currentUser?.id, // checked by RLS
       'rating': rating,
       'comment': comment.trim().isEmpty ? null : comment.trim(),
     });
