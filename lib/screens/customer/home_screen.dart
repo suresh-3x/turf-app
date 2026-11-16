@@ -95,6 +95,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
                       avatar: Icon(iconForCategory(c), size: 18),
+                      showCheckmark: false,
                       label: Text(c),
                       selected: _category == c,
                       onSelected: (sel) => setState(() => _category = sel ? c : null),

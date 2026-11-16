@@ -394,7 +394,7 @@ class MockDatabase {
     book(
       'u-customer-2',
       'svc-badminton',
-      pastSlot('svc-badminton', 0, n.hour > 0 ? n.hour - 1 : 0),
+      n.hour >= 8 ? pastSlot('svc-badminton', 0, n.hour - 1) : pastSlot('svc-badminton', 1, 19),
       'confirmed',
       daysAgo: 1,
     );

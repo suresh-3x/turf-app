@@ -106,30 +106,19 @@ class _ManageSlotsScreenState extends ConsumerState<ManageSlotsScreen> {
           return Column(
             children: [
               SizedBox(
-                height: 72,
-                child: ListView.builder(
+                height: 88,
+                child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: days.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, i) {
                     final d = days[i];
-                    final count = all.where((s) => isSameDay(s.startTime, d)).length;
-                    final selected = isSameDay(d, _day);
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ChoiceChip(
-                        selected: selected,
-                        onSelected: (_) => setState(() => _day = d),
-                        label: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(formatDay(d).split(',').first),
-                            Text('${d.day}', style: theme.textTheme.titleSmall),
-                            Text(count == 0 ? '—' : '$count', style: theme.textTheme.labelSmall),
-                          ],
-                        ),
-                        showCheckmark: false,
-                      ),
+                    return _VendorDayTile(
+                      day: d,
+                      slotCount: all.where((s) => isSameDay(s.startTime, d)).length,
+                      selected: isSameDay(d, _day),
+                      onTap: () => setState(() => _day = d),
                     );
                   },
                 ),
@@ -289,6 +278,7 @@ class _AddSlotsSheetState extends ConsumerState<_AddSlotsSheet> {
                   ButtonSegment(value: d, label: Text(d == 1 ? '1 day' : '$d days')),
               ],
               selected: {_days},
+              showSelectedIcon: false,
               onSelectionChanged: (s) => setState(() => _days = s.first),
             ),
             if (_days > 1) ...[
@@ -313,17 +303,19 @@ class _AddSlotsSheetState extends ConsumerState<_AddSlotsSheet> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.wb_sunny_outlined),
-                    label: Text('Opens ${_open.format(context)}'),
+                  child: _TimeButton(
+                    icon: Icons.wb_sunny_outlined,
+                    caption: 'Opens',
+                    time: _open.format(context),
                     onPressed: () => _pickTime(true),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.nightlight_outlined),
-                    label: Text('Closes ${_close.format(context)}'),
+                  child: _TimeButton(
+                    icon: Icons.nightlight_outlined,
+                    caption: 'Closes',
+                    time: _close.format(context),
                     onPressed: () => _pickTime(false),
                   ),
                 ),
@@ -372,6 +364,96 @@ class _AddSlotsSheetState extends ConsumerState<_AddSlotsSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _VendorDayTile extends StatelessWidget {
+  const _VendorDayTile({
+    required this.day,
+    required this.slotCount,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final DateTime day;
+  final int slotCount;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final fg = selected ? scheme.onPrimary : scheme.onSurface;
+    final muted = selected ? scheme.onPrimary : scheme.onSurfaceVariant;
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: '${formatDayLong(day)}, $slotCount slots',
+      excludeSemantics: true,
+      child: Material(
+        color: selected ? scheme.primary : scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: SizedBox(
+            width: 56,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(formatDay(day).split(',').first, style: text.labelSmall?.copyWith(color: fg)),
+                Text('${day.day}', style: text.titleMedium?.copyWith(color: fg)),
+                Text(
+                  slotCount == 0 ? '—' : '$slotCount',
+                  style: text.labelSmall?.copyWith(color: muted),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TimeButton extends StatelessWidget {
+  const _TimeButton({
+    required this.icon,
+    required this.caption,
+    required this.time,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String caption;
+  final String time;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        alignment: Alignment.centerLeft,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(caption, style: theme.textTheme.labelSmall),
+              Text(time, style: theme.textTheme.titleSmall),
+            ],
+          ),
+        ],
       ),
     );
   }
